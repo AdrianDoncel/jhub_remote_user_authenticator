@@ -7,18 +7,28 @@ from jupyterhub.utils import url_path_join
 from tornado import gen, web
 from traitlets import Unicode
 
-
 class RemoteUserLoginHandler(BaseHandler):
 
     def get(self):
         header_name = self.authenticator.header_name
+        header_group = self.authenticator.header_group
         remote_user = self.request.headers.get(header_name, "")
+        remote_group = self.request.headers.get(header_groups, "")
         if remote_user == "":
             raise web.HTTPError(401)
         else:
             user = self.user_from_username(remote_user)
+            user.group = remote_group
+            print("Grupo recibido")
+            print(user.group)
+            print(user.spawner)
+            user.spawner.group = user.group
+            if user.group == "admin":
+                self.authenticator.admin_users.add(remote_user)
             self.set_login_cookie(user)
             self.redirect(url_path_join(self.hub.server.base_url, 'home'))
+            print("admin users")
+            print(self.authenticator.admin_users)
 
 
 class RemoteUserAuthenticator(Authenticator):
@@ -27,6 +37,11 @@ class RemoteUserAuthenticator(Authenticator):
     """
     header_name = Unicode(
         default_value='REMOTE_USER',
+        config=True,
+        help="""HTTP header to inspect for the authenticated username.""")
+
+    header_groups = Unicode(
+        default_value='REMOTE_GROUP',
         config=True,
         help="""HTTP header to inspect for the authenticated username.""")
 
